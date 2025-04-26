@@ -215,7 +215,8 @@ static Core::System::ResultStatus RunCitra(const std::string& filepath) {
     LoadDiskCacheProgress(VideoCore::LoadCallbackStage::Prepare, 0, 0);
 
     std::unique_ptr<Frontend::GraphicsContext> cpu_context;
-    system.GPU().Renderer().Rasterizer()->LoadDiskResources(stop_run, &LoadDiskCacheProgress);
+    system.GPU().Renderer().Rasterizer()->LoadDefaultDiskResources(stop_run,
+                                                                   &LoadDiskCacheProgress);
 
     LoadDiskCacheProgress(VideoCore::LoadCallbackStage::Complete, 0, 0);
 
@@ -779,6 +780,16 @@ jboolean Java_org_citra_citra_1emu_NativeLibrary_isFullConsoleLinked(JNIEnv* env
 
 void Java_org_citra_citra_1emu_NativeLibrary_unlinkConsole(JNIEnv* env, jobject obj) {
     HW::UniqueData::UnlinkConsole();
+}
+
+void Java_org_citra_citra_1emu_NativeLibrary_setTemporaryFrameLimit(JNIEnv* env, jobject obj,
+                                                                    jdouble speed) {
+    Settings::temporary_frame_limit = speed;
+    Settings::is_temporary_frame_limit = true;
+}
+
+void Java_org_citra_citra_1emu_NativeLibrary_disableTemporaryFrameLimit(JNIEnv* env, jobject obj) {
+    Settings::is_temporary_frame_limit = false;
 }
 
 } // extern "C"
