@@ -106,6 +106,15 @@ enum class TextureSampling : u32 {
     Linear = 2,
 };
 
+enum class AspectRatio : u32 {
+    Default = 0,
+    R16_9 = 1,
+    R4_3 = 2,
+    R21_9 = 3,
+    R16_10 = 4,
+    Stretch = 5,
+};
+
 namespace NativeButton {
 
 enum Values {
@@ -489,6 +498,7 @@ struct Values {
     Setting<bool> renderer_debug{false, "renderer_debug"};
     Setting<bool> dump_command_buffers{false, "dump_command_buffers"};
     SwitchableSetting<bool> spirv_shader_gen{true, "spirv_shader_gen"};
+    SwitchableSetting<bool> disable_spirv_optimizer{true, "disable_spirv_optimizer"};
     SwitchableSetting<bool> async_shader_compilation{false, "async_shader_compilation"};
     SwitchableSetting<bool> async_presentation{true, "async_presentation"};
     SwitchableSetting<bool> use_hw_shader{true, "use_hw_shader"};
@@ -522,7 +532,7 @@ struct Values {
     Setting<u16> custom_bottom_width{640, "custom_bottom_width"};
     Setting<u16> custom_bottom_height{480, "custom_bottom_height"};
     Setting<u16> custom_second_layer_opacity{100, "custom_second_layer_opacity"};
-
+    SwitchableSetting<AspectRatio> aspect_ratio{AspectRatio::Default, "aspect_ratio"};
     SwitchableSetting<bool> screen_top_stretch{false, "screen_top_stretch"};
     Setting<u16> screen_top_leftright_padding{0, "screen_top_leftright_padding"};
     Setting<u16> screen_top_topbottom_padding{0, "screen_top_topbottom_padding"};
@@ -587,6 +597,7 @@ struct Values {
     Setting<bool> use_gdbstub{false, "use_gdbstub"};
     Setting<u16> gdbstub_port{24689, "gdbstub_port"};
     Setting<bool> instant_debug_log{false, "instant_debug_log"};
+    Setting<bool> enable_rpc_server{false, "enable_rpc_server"};
 
     // Miscellaneous
     Setting<std::string> log_filter{"*:Info", "log_filter"};

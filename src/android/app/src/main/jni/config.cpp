@@ -142,6 +142,7 @@ void Config::ReadValues() {
     ReadSetting("Renderer", Settings::values.async_presentation);
     ReadSetting("Renderer", Settings::values.async_shader_compilation);
     ReadSetting("Renderer", Settings::values.spirv_shader_gen);
+    ReadSetting("Renderer", Settings::values.disable_spirv_optimizer);
     ReadSetting("Renderer", Settings::values.use_hw_shader);
     ReadSetting("Renderer", Settings::values.use_shader_jit);
     ReadSetting("Renderer", Settings::values.resolution_factor);
@@ -197,10 +198,12 @@ void Config::ReadValues() {
     ReadSetting("Layout", Settings::values.custom_bottom_x);
     ReadSetting("Layout", Settings::values.custom_bottom_y);
     ReadSetting("Layout", Settings::values.custom_bottom_width);
+    ReadSetting("Layout", Settings::values.aspect_ratio);
     ReadSetting("Layout", Settings::values.custom_bottom_height);
     ReadSetting("Layout", Settings::values.cardboard_screen_size);
     ReadSetting("Layout", Settings::values.cardboard_x_shift);
     ReadSetting("Layout", Settings::values.cardboard_y_shift);
+    ReadSetting("Layout", Settings::values.upright_screen);
 
     Settings::values.portrait_layout_option =
         static_cast<Settings::PortraitLayoutOption>(sdl2_config->GetInteger(
@@ -292,6 +295,7 @@ void Config::ReadValues() {
     ReadSetting("Debugging", Settings::values.use_gdbstub);
     ReadSetting("Debugging", Settings::values.gdbstub_port);
     ReadSetting("Debugging", Settings::values.instant_debug_log);
+    ReadSetting("Debugging", Settings::values.enable_rpc_server);
 
     for (const auto& service_module : Service::service_module_map) {
         bool use_lle = sdl2_config->GetBoolean("Debugging", "LLE\\" + service_module.name, false);

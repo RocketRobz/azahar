@@ -56,7 +56,6 @@ static void PrintHelp(const char* argv0) {
                  "--web-api-url       Citra Web API url\n"
                  "--ban-list-file     The file for storing the room ban list\n"
                  "--log-file          The file for storing the room log\n"
-                 "--enable-citra-mods Allow Citra Community Moderators to moderate on your room\n"
                  "-h, --help          Display this help and exit\n"
                  "-v, --version       Output version information and exit\n";
 }
@@ -183,7 +182,6 @@ void LaunchRoom(int argc, char** argv, bool called_by_option) {
     u64 preferred_game_id = 0;
     u16 port = Network::DefaultRoomPort;
     u32 max_members = 16;
-    bool enable_citra_mods = false;
 
     static struct option long_options[] = {
         {"room-name", required_argument, 0, 'n'},
@@ -198,10 +196,10 @@ void LaunchRoom(int argc, char** argv, bool called_by_option) {
         {"web-api-url", required_argument, 0, 'a'},
         {"ban-list-file", required_argument, 0, 'b'},
         {"log-file", required_argument, 0, 'l'},
-        {"enable-citra-mods", no_argument, 0, 'e'},
         {"help", no_argument, 0, 'h'},
         {"version", no_argument, 0, 'v'},
         // Removed options
+        {"enable-citra-mods", no_argument, 0, 'e'},
         {"preferred-game", optional_argument, 0, 'g'},
         {"preferred-game-id", optional_argument, 0, 0},
         // Entry option
@@ -211,7 +209,8 @@ void LaunchRoom(int argc, char** argv, bool called_by_option) {
     };
 
     while (optind < argc) {
-        int arg = getopt_long(argc, argv, "n:d:p:m:w:s:u:t:a:i:l:hvg", long_options, &option_index);
+        int arg =
+            getopt_long(argc, argv, "n:d:p:m:w:s:u:t:a:i:l:hveg", long_options, &option_index);
         if (arg != -1) {
             switch (static_cast<char>(arg)) {
             case 'n':
@@ -250,15 +249,15 @@ void LaunchRoom(int argc, char** argv, bool called_by_option) {
             case 'l':
                 log_file.assign(optarg);
                 break;
-            case 'e':
-                enable_citra_mods = true;
-                break;
             case 'h':
                 PrintHelp(argv[0]);
                 exit(0);
             case 'v':
                 PrintVersion();
                 exit(0);
+            case 'e':
+                PrintRemovedOptionWarning(argv[0], "--enable-citra-mods/-e");
+                exit(255);
             case 'g':
                 PrintRemovedOptionWarning(argv[0], "--preferred-game/-g");
                 exit(255);
@@ -324,10 +323,6 @@ void LaunchRoom(int argc, char** argv, bool called_by_option) {
             NetSettings::values.citra_token = token;
         }
     }
-    if (!announce && enable_citra_mods) {
-        enable_citra_mods = false;
-        std::cout << "Can not enable Citra Moderators for private rooms\n\n";
-    }
 
     InitializeLogging(log_file);
 
@@ -354,8 +349,7 @@ void LaunchRoom(int argc, char** argv, bool called_by_option) {
     Network::Init();
     if (std::shared_ptr<Network::Room> room = Network::GetRoom().lock()) {
         if (!room->Create(room_name, room_description, "", port, password, max_members, username,
-                          preferred_game, preferred_game_id, std::move(verify_backend), ban_list,
-                          enable_citra_mods)) {
+                          preferred_game, preferred_game_id, std::move(verify_backend), ban_list)) {
             std::cout << "Failed to create room: \n\n";
             exit(-1);
         }

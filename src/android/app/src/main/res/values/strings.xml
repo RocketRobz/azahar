@@ -84,6 +84,10 @@
     <string name="add_games_warning">Skip selecting applications folder?</string>
     <string name="add_games_warning_description">Software won\'t be displayed in the Applications list if a folder isn\'t selected.</string>
     <string name="add_games_warning_help" translatable="false">https://web.archive.org/web/20240304210021/https://citra-emu.org/wiki/dumping-game-cartridges/</string>
+    <string name="permissions">Permissions</string>
+    <string name="select_emulator_data_folders">Data Folders</string>
+    <string name="select_emulator_data_folders_description"><![CDATA[Select data folders<br/>(User folder is required)]]></string>
+    <string name="permissions_description">Grant optional permissions to use specific features of the emulator</string>
     <string name="warning_help">Help</string>
     <string name="warning_skip">Skip</string>
     <string name="warning_cancel">Cancel</string>
@@ -93,7 +97,7 @@
     <string name="keep_current_azahar_directory">Keep Current Azahar Directory</string>
     <string name="use_prior_lime3ds_directory">Use Prior Lime3DS Directory</string>
     <string name="select">Select</string>
-    <string name="cannot_skip">You can\'t skip this step</string>
+    <string name="cannot_skip">You can\'t skip setting up the user folder</string>
     <string name="cannot_skip_directory_description">This step is required to allow Azahar to work. Please select a directory and then you can continue.</string>
     <string name="selecting_user_directory_without_write_permissions">You have lost write permissions on your <a href="https://web.archive.org/web/20240304193549/https://github.com/citra-emu/citra/wiki/Citra-Android-user-data-and-storage">user data</a> directory, where saves and other information are stored. This can happen after some app or Android updates. Please re-select the directory to regain permissions so you can continue.</string>
     <string name="cannot_skip_directory_help" translatable="false">https://web.archive.org/web/20240304193549/https://github.com/citra-emu/citra/wiki/Citra-Android-user-data-and-storage</string>
@@ -318,6 +322,8 @@
     <string name="delay_start_lle_modules_description">Delays the start of the app when LLE modules are enabled.</string>
     <string name="deterministic_async_operations">Deterministic Async Operations</string>
     <string name="deterministic_async_operations_description">Makes async operations deterministic for debugging. Enabling this may cause freezes.</string>
+    <string name="enable_rpc_server">Enable RPC Server</string>
+    <string name="enable_rpc_server_desc">Enables the RPC server on port 45987. This allows remotely reading/writing guest memory.</string>
 
     <!-- Layout settings strings -->
     <string name="layout_screen_orientation">Screen Orientation</string>
@@ -326,6 +332,12 @@
     <string name="layout_screen_orientation_landscape_reverse">Reverse Landscape</string>
     <string name="layout_screen_orientation_portrait">Portrait</string>
     <string name="layout_screen_orientation_portrait_reverse">Reverse Portrait</string>
+    <string name="aspect_ratio_default">Default</string>
+    <string name="aspect_ratio_16_9">16:9</string>
+    <string name="aspect_ratio_4_3">4:3</string>
+    <string name="aspect_ratio_21_9_fullscreen">21:9</string>
+    <string name="aspect_ratio_16_10_fullscreen_stretched">16:10</string>
+    <string name="aspect_ratio_stretch">Stretch</string>
 
     <!-- Miscellaneous -->
     <string name="clear">Clear</string>
@@ -411,6 +423,7 @@
     <string name="emulation_control_dpad_slide_enable">D-Pad Sliding</string>
     <string name="emulation_open_settings">Open Settings</string>
     <string name="emulation_open_cheats">Open Cheats</string>
+    <string name="emulation_aspect_ratio">Aspect Ratio</string>
     <string name="emulation_switch_screen_layout">Landscape Screen Layout</string>
     <string name="emulation_switch_portrait_layout">Portrait Screen Layout</string>
     <string name="emulation_screen_layout_largescreen">Large Screen</string>
@@ -446,6 +459,7 @@
     <string name="emulation_custom_layout_height">Height</string>
     <string name="emulation_cycle_landscape_layouts">Cycle Layouts</string>
     <string name="emulation_swap_screens">Swap Screens</string>
+    <string name="emulation_rotate_upright">Rotate Screen Upright</string>
     <string name="emulation_touch_overlay_reset">Reset Overlay</string>
     <string name="emulation_show_controller_overlay">Show Controller Overlay</string>
     <string name="emulation_close_game">Close Game</string>
@@ -856,5 +870,7 @@
     <string name="emulation_quickload">Quickload</string>
     <string name="emulation_occupied_quicksave_slot">Quicksave - %1$tF %1$tR</string>
     <string name="quickload_not_found">No Quicksave available.</string>
+    <string name="disable_spirv_optimizer">Disable SPIR-V Optimizer</string>
+    <string name="disable_spirv_optimizer_description">Disables the SPIR-V optimization pass, reducing stuttering considerably while barely affecting performance.</string>
 
 </resources>
