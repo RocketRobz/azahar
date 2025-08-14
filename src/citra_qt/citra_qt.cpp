@@ -9,6 +9,7 @@
 #include <thread>
 #include <QFileDialog>
 #include <QFutureWatcher>
+#include <QIcon>
 #include <QLabel>
 #include <QMessageBox>
 #include <QPalette>
@@ -167,6 +168,12 @@ void GMainWindow::ShowCommandOutput(std::string title, std::string message) {
 #else
     std::cout << message << std::endl;
 #endif
+}
+
+bool IsPrerelease() {
+    return ((strstr(Common::g_build_fullname, "alpha") != NULL) ||
+            (strstr(Common::g_build_fullname, "beta") != NULL) ||
+            (strstr(Common::g_build_fullname, "rc") != NULL));
 }
 
 GMainWindow::GMainWindow(Core::System& system_)
@@ -330,8 +337,6 @@ GMainWindow::GMainWindow(Core::System& system_)
     ui->setupUi(this);
     statusBar()->hide();
 
-    setWindowIcon(QIcon(QString::fromStdString(":/icons/azahar.png")));
-
     default_theme_paths = QIcon::themeSearchPaths();
     UpdateUITheme();
 
@@ -390,17 +395,17 @@ GMainWindow::GMainWindow(Core::System& system_)
     LOG_INFO(Frontend, "Host Swap: {:.2f} GiB", mem_info.total_swap_memory / f64{1_GiB});
     UpdateWindowTitle();
 
+    QIcon azahar_icon = QIcon(QString::fromStdString(":/icons/default/256x256/azahar.png"));
+    render_window->setWindowIcon(azahar_icon);
+    secondary_window->setWindowIcon(azahar_icon);
+
     show();
 
 #ifdef ENABLE_QT_UPDATE_CHECKER
     if (UISettings::values.check_for_update_on_start) {
         update_future = QtConcurrent::run([]() -> QString {
-            const bool is_prerelease = // TODO: This can be done better -OS
-                ((strstr(Common::g_build_fullname, "alpha") != NULL) ||
-                 (strstr(Common::g_build_fullname, "beta") != NULL) ||
-                 (strstr(Common::g_build_fullname, "rc") != NULL));
             const std::optional<std::string> latest_release_tag =
-                UpdateChecker::GetLatestRelease(is_prerelease);
+                UpdateChecker::GetLatestRelease(IsPrerelease());
             if (latest_release_tag && latest_release_tag.value() != Common::g_build_fullname) {
                 return QString::fromStdString(latest_release_tag.value());
             }
@@ -3923,8 +3928,13 @@ void GMainWindow::OnEmulatorUpdateAvailable() {
                               .arg(version_string));
     update_prompt.exec();
     if (update_prompt.button(QMessageBox::Yes) == update_prompt.clickedButton()) {
-        QDesktopServices::openUrl(
-            QUrl(QString::fromStdString("https://azahar-emu.org/pages/download/")));
+        std::string update_page_url;
+        if (IsPrerelease()) {
+            update_page_url = "https://github.com/azahar-emu/azahar/releases";
+        } else {
+            update_page_url = "https://azahar-emu.org/pages/download/";
+        }
+        QDesktopServices::openUrl(QUrl(QString::fromStdString(update_page_url)));
     }
 }
 #endif

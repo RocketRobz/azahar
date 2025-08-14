@@ -100,7 +100,15 @@ void RendererOpenGL::SwapBuffers() {
     const auto& main_layout = render_window.GetFramebufferLayout();
     RenderToMailbox(main_layout, render_window.mailbox, false);
 
-#ifndef ANDROID
+#ifdef ANDROID
+    // On Android, if secondary_window is defined at all,
+    // it means we have a second display
+    if (secondary_window) {
+        const auto& secondary_layout = secondary_window->GetFramebufferLayout();
+        RenderToMailbox(secondary_layout, secondary_window->mailbox, false);
+        secondary_window->PollEvents();
+    }
+#else
     if (Settings::values.layout_option.GetValue() == Settings::LayoutOption::SeparateWindows) {
         ASSERT(secondary_window);
         const auto& secondary_layout = secondary_window->GetFramebufferLayout();
@@ -108,6 +116,7 @@ void RendererOpenGL::SwapBuffers() {
         secondary_window->PollEvents();
     }
 #endif
+
     if (frame_dumper.IsDumping()) {
         try {
             RenderToMailbox(frame_dumper.GetLayout(), frame_dumper.mailbox, true);
@@ -367,7 +376,7 @@ void RendererOpenGL::ReloadShader() {
     // Link shaders and get variable locations
     std::string shader_data = fragment_shader_precision_OES;
     if (Settings::values.render_3d.GetValue() == Settings::StereoRenderOption::Anaglyph) {
-        if (Settings::values.anaglyph_shader_name.GetValue() == "dubois (builtin)") {
+        if (Settings::values.anaglyph_shader_name.GetValue() == "Dubois (builtin)") {
             shader_data += HostShaders::OPENGL_PRESENT_ANAGLYPH_FRAG;
         } else {
             std::string shader_text = OpenGL::GetPostProcessingShaderCode(
@@ -384,7 +393,7 @@ void RendererOpenGL::ReloadShader() {
                    Settings::StereoRenderOption::ReverseInterlaced) {
         shader_data += HostShaders::OPENGL_PRESENT_INTERLACED_FRAG;
     } else {
-        if (Settings::values.pp_shader_name.GetValue() == "none (builtin)") {
+        if (Settings::values.pp_shader_name.GetValue() == "None (builtin)") {
             shader_data += HostShaders::OPENGL_PRESENT_FRAG;
         } else {
             std::string shader_text = OpenGL::GetPostProcessingShaderCode(
