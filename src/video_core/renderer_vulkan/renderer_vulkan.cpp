@@ -61,31 +61,6 @@ constexpr static std::array<vk::DescriptorSetLayoutBinding, 1> PRESENT_BINDINGS 
 namespace {
 static bool IsLowRefreshRate() {
 #if defined(__APPLE__) || defined(ENABLE_SDL2)
-#ifdef __APPLE__ // Need a special implementation because MacOS kills itself in disgust if the
-                 // input thread calls SDL_PumpEvents at the same time as we're in SDL_Init here.
-    const auto cur_refresh_rate = AppleUtils::GetRefreshRate();
-#elif defined(ENABLE_SDL2)
-    if (SDL_Init(SDL_INIT_VIDEO) != 0) {
-        LOG_ERROR(Render_Vulkan, "SDL video failed to initialize, unable to check refresh rate");
-        return false;
-    }
-
-    SDL_DisplayMode cur_display_mode;
-    SDL_GetCurrentDisplayMode(0, &cur_display_mode); // TODO: Multimonitor handling. -OS
-    const auto cur_refresh_rate = cur_display_mode.refresh_rate;
-
-    SDL_QuitSubSystem(SDL_INIT_VIDEO);
-#endif // __APPLE__
-
-    if (cur_refresh_rate < SCREEN_REFRESH_RATE) {
-        LOG_WARNING(Render_Vulkan,
-                    "Detected refresh rate lower than the emulated 3DS screen: {}hz. FIFO will "
-                    "be disabled",
-                    cur_refresh_rate);
-        return true;
-    }
-#endif // defined(__APPLE__) || defined(ENABLE_SDL2)
-
 #ifdef __APPLE__
     // Apple's low power mode sometimes limits applications to 30fps without changing the refresh
     // rate, meaning the above code doesn't catch it.
@@ -94,8 +69,34 @@ static bool IsLowRefreshRate() {
                                    "framerate. FIFO will be disabled");
         return true;
     }
-#endif
 
+    const auto cur_refresh_rate = AppleUtils::GetRefreshRate();
+#elif defined(ENABLE_SDL2)
+    if (SDL_WasInit(SDL_INIT_VIDEO) == 0) {
+        LOG_ERROR(Render_Vulkan, "Attempted to check refresh rate via SDL, but failed because "
+                                 "SDL_INIT_VIDEO wasn't initialized");
+        return false;
+    }
+
+    SDL_DisplayMode cur_display_mode;
+    SDL_GetCurrentDisplayMode(0, &cur_display_mode); // TODO: Multimonitor handling. -OS
+
+    const auto cur_refresh_rate = cur_display_mode.refresh_rate;
+#endif // ENABLE_SDL2
+
+    if (cur_refresh_rate < SCREEN_REFRESH_RATE) {
+        LOG_WARNING(Render_Vulkan,
+                    "Detected refresh rate lower than the emulated 3DS screen: {}hz. FIFO will "
+                    "be disabled",
+                    cur_refresh_rate);
+        return true;
+    } else {
+        LOG_INFO(Render_Vulkan, "Refresh rate is above emulated 3DS screen: {}hz. Good.",
+                 cur_refresh_rate);
+    }
+#endif // defined(__APPLE__) || defined(ENABLE_SDL2)
+
+    // We have no available method of checking refresh rate. Just assume that everything is fine :)
     return false;
 }
 } // Anonymous namespace
@@ -376,7 +377,13 @@ void RendererVulkan::BuildPipelines() {
     };
 
     const vk::PipelineColorBlendAttachmentState colorblend_attachment = {
-        .blendEnable = false,
+        .blendEnable = true,
+        .srcColorBlendFactor = vk::BlendFactor::eConstantAlpha,
+        .dstColorBlendFactor = vk::BlendFactor::eOneMinusConstantAlpha,
+        .colorBlendOp = vk::BlendOp::eAdd,
+        .srcAlphaBlendFactor = vk::BlendFactor::eConstantAlpha,
+        .dstAlphaBlendFactor = vk::BlendFactor::eOneMinusConstantAlpha,
+        .alphaBlendOp = vk::BlendOp::eAdd,
         .colorWriteMask = vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG |
                           vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA,
     };
@@ -385,7 +392,6 @@ void RendererVulkan::BuildPipelines() {
         .logicOpEnable = false,
         .attachmentCount = 1,
         .pAttachments = &colorblend_attachment,
-        .blendConstants = std::array{1.0f, 1.0f, 1.0f, 1.0f},
     };
 
     const vk::Viewport placeholder_viewport = vk::Viewport{0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f};
@@ -398,6 +404,7 @@ void RendererVulkan::BuildPipelines() {
     };
 
     const std::array dynamic_states = {
+        vk::DynamicState::eBlendConstants,
         vk::DynamicState::eViewport,
         vk::DynamicState::eScissor,
     };
@@ -729,6 +736,13 @@ void RendererVulkan::DrawSingleScreenStereo(u32 screen_id_l, u32 screen_id_r, fl
     });
 }
 
+void RendererVulkan::ApplySecondLayerOpacity(float alpha) {
+    scheduler.Record([alpha](vk::CommandBuffer cmdbuf) {
+        const std::array<float, 4> blend_constants = {0.0f, 0.0f, 0.0f, alpha};
+        cmdbuf.setBlendConstants(blend_constants.data());
+    });
+}
+
 void RendererVulkan::DrawTopScreen(const Layout::FramebufferLayout& layout,
                                    const Common::Rectangle<u32>& top_screen) {
     if (!layout.top_screen_enabled) {
@@ -867,13 +881,30 @@ void RendererVulkan::DrawScreens(Frame* frame, const Layout::FramebufferLayout& 
     draw_info.modelview = MakeOrthographicMatrix(layout.width, layout.height);
 
     draw_info.layer = 0;
+
+    // Apply the initial default opacity value; Needed to avoid flickering
+    ApplySecondLayerOpacity(1.0f);
+
+    bool use_custom_opacity =
+        Settings::values.layout_option.GetValue() == Settings::LayoutOption::CustomLayout &&
+        Settings::values.custom_second_layer_opacity.GetValue() < 100;
+    float second_alpha = use_custom_opacity
+                             ? Settings::values.custom_second_layer_opacity.GetValue() / 100.0f
+                             : 1.0f;
+
     if (!Settings::values.swap_screen.GetValue()) {
         DrawTopScreen(layout, top_screen);
         draw_info.layer = 0;
+        if (use_custom_opacity) {
+            ApplySecondLayerOpacity(second_alpha);
+        }
         DrawBottomScreen(layout, bottom_screen);
     } else {
         DrawBottomScreen(layout, bottom_screen);
         draw_info.layer = 0;
+        if (use_custom_opacity) {
+            ApplySecondLayerOpacity(second_alpha);
+        }
         DrawTopScreen(layout, top_screen);
     }
 
