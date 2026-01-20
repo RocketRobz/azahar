@@ -60,7 +60,9 @@
 #include "citra_qt/debugger/profiler.h"
 #include "citra_qt/debugger/registers.h"
 #include "citra_qt/debugger/wait_tree.h"
+#ifdef USE_DISCORD_PRESENCE
 #include "citra_qt/discord.h"
+#endif
 #include "citra_qt/dumping/dumping_dialog.h"
 #include "citra_qt/game_list.h"
 #include "citra_qt/hotkeys.h"
@@ -80,7 +82,6 @@
 #include "citra_qt/util/util.h"
 #include "common/arch.h"
 #include "common/common_paths.h"
-#include "common/detached_tasks.h"
 #include "common/dynamic_library/dynamic_library.h"
 #include "common/file_util.h"
 #include "common/literals.h"
@@ -342,8 +343,10 @@ GMainWindow::GMainWindow(Core::System& system_)
     default_theme_paths = QIcon::themeSearchPaths();
     UpdateUITheme();
 
+#ifdef USE_DISCORD_PRESENCE
     SetDiscordEnabled(UISettings::values.enable_discord_presence.GetValue());
     discord_rpc->Update();
+#endif
 
     play_time_manager = std::make_unique<PlayTime::PlayTimeManager>();
 
@@ -1512,7 +1515,10 @@ void GMainWindow::ShutdownGame() {
 
     AllowOSSleep();
 
+#ifdef USE_DISCORD_PRESENCE
     discord_rpc->Pause();
+#endif
+
     emu_thread->RequestStop();
 
     // Release emu threads from any breakpoints
@@ -1540,8 +1546,9 @@ void GMainWindow::ShutdownGame() {
 
     OnCloseMovie();
 
+#ifdef USE_DISCORD_PRESENCE
     discord_rpc->Update();
-
+#endif
 #ifdef __unix__
     Common::Linux::StopGamemode();
 #endif
@@ -1592,6 +1599,7 @@ void GMainWindow::ShutdownGame() {
     secondary_window->ReleaseRenderTarget();
 }
 
+#ifdef ENABLE_DEVELOPER_OPTIONS
 void GMainWindow::StartLaunchStressTest(const QString& game_path) {
     QThreadPool::globalInstance()->start([this, game_path] {
         do {
@@ -1601,6 +1609,7 @@ void GMainWindow::StartLaunchStressTest(const QString& game_path) {
         } while (emulation_running);
     });
 }
+#endif
 
 void GMainWindow::StoreRecentFile(const QString& filename) {
     UISettings::values.recent_files.prepend(filename);
@@ -2477,8 +2486,9 @@ void GMainWindow::OnStartGame() {
     play_time_manager->SetProgramId(game_title_id);
     play_time_manager->Start();
 
+#ifdef USE_DISCORD_PRESENCE
     discord_rpc->Update();
-
+#endif
 #ifdef __unix__
     Common::Linux::StartGamemode();
 #endif
@@ -2802,7 +2812,9 @@ void GMainWindow::OnConfigure() {
     const int old_input_profile_index = Settings::values.current_input_profile_index;
     const auto old_input_profiles = Settings::values.input_profiles;
     const auto old_touch_from_button_maps = Settings::values.touch_from_button_maps;
+#ifdef USE_DISCORD_PRESENCE
     const bool old_discord_presence = UISettings::values.enable_discord_presence.GetValue();
+#endif
 #ifdef __unix__
     const bool old_gamemode = Settings::values.enable_gamemode.GetValue();
 #endif
@@ -2814,9 +2826,11 @@ void GMainWindow::OnConfigure() {
         if (UISettings::values.theme != old_theme) {
             UpdateUITheme();
         }
+#ifdef USE_DISCORD_PRESENCE
         if (UISettings::values.enable_discord_presence.GetValue() != old_discord_presence) {
             SetDiscordEnabled(UISettings::values.enable_discord_presence.GetValue());
         }
+#endif
 #ifdef __unix__
         if (Settings::values.enable_gamemode.GetValue() != old_gamemode) {
             SetGamemodeEnabled(Settings::values.enable_gamemode.GetValue());
@@ -3677,6 +3691,12 @@ void GMainWindow::UpdateAPIIndicator(bool update) {
         if (api_index == static_cast<u32>(Settings::GraphicsAPI::Vulkan)) {
             api_index = (api_index + 1) % graphics_apis.size();
         }
+#else
+        if (physical_devices.empty()) {
+            if (api_index == static_cast<u32>(Settings::GraphicsAPI::Vulkan)) {
+                api_index = (api_index + 1) % graphics_apis.size();
+            }
+        }
 #endif
         Settings::values.graphics_api = static_cast<Settings::GraphicsAPI>(api_index);
     }
@@ -4166,18 +4186,16 @@ void GMainWindow::RetranslateStatusBar() {
     multiplayer_state->retranslateUi();
 }
 
-void GMainWindow::SetDiscordEnabled([[maybe_unused]] bool state) {
 #ifdef USE_DISCORD_PRESENCE
+void GMainWindow::SetDiscordEnabled([[maybe_unused]] bool state) {
     if (state) {
         discord_rpc = std::make_unique<DiscordRPC::DiscordImpl>(system);
     } else {
         discord_rpc = std::make_unique<DiscordRPC::NullImpl>();
     }
-#else
-    discord_rpc = std::make_unique<DiscordRPC::NullImpl>();
-#endif
     discord_rpc->Update();
 }
+#endif
 
 #ifdef __unix__
 void GMainWindow::SetGamemodeEnabled(bool state) {
@@ -4234,13 +4252,11 @@ static Qt::HighDpiScaleFactorRoundingPolicy GetHighDpiRoundingPolicy() {
 #endif
 }
 
-void LaunchQtFrontend(int argc, char* argv[]) {
+int LaunchQtFrontend(int argc, char* argv[]) {
 #ifdef __APPLE__
     // Ensure that the linker doesn't optimize qt_swizzle.mm out of existence.
     QtSwizzle::Dummy();
 #endif
-
-    Common::DetachedTasks detached_tasks;
 
 #if MICROPROFILE_ENABLED
     MicroProfileOnThreadCreate("Frontend");
@@ -4311,6 +4327,5 @@ void LaunchQtFrontend(int argc, char* argv[]) {
                      &GMainWindow::OnAppFocusStateChanged);
 
     int result = app.exec();
-    detached_tasks.WaitForAllTasks();
-    exit(result);
+    return result;
 }
