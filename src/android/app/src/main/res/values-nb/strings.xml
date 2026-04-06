@@ -3,13 +3,10 @@
 
     <!-- Home Strings -->
     <string name="grid_menu_core_settings">Innstillinger</string>
-    <!-- Input related strings -->
     <string name="controller_circlepad">Gliplate</string>
     <string name="controller_c">C-Spak</string>
     <string name="controller_triggers">Utløser</string>
     <string name="controller_dpad">Kontrollpluss</string>
-    <string name="controller_axis_vertical">Opp/Ned Akse</string>
-    <string name="controller_axis_horizontal">Venstre/Høyre Akse</string>
     <string name="input_binding">Inngangsinnbinding</string>
     <string name="input_binding_description">Trykk eller flytt en inngang for å binde den til %1$s.</string>
     <string name="input_message_analog_only">Denne kontrollen må være bundet til en håndkontroller\'s analog spak eller kontrollpluss akse!</string>

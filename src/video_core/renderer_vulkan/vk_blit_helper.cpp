@@ -2,6 +2,7 @@
 // Licensed under GPLv2 or any later version
 // Refer to the license.txt file included.
 
+#include "common/hash.h"
 #include "common/settings.h"
 #include "common/vector_math.h"
 #include "video_core/renderer_vulkan/vk_blit_helper.h"
@@ -249,8 +250,7 @@ BlitHelper::BlitHelper(const Instance& instance_, Scheduler& scheduler_,
                                   vk::ShaderStageFlagBits::eCompute, device)},
       depth_to_buffer_comp{Compile(HostShaders::VULKAN_DEPTH_TO_BUFFER_COMP,
                                    vk::ShaderStageFlagBits::eCompute, device)},
-      blit_depth_stencil_frag{Compile(HostShaders::VULKAN_BLIT_DEPTH_STENCIL_FRAG,
-                                      vk::ShaderStageFlagBits::eFragment, device)},
+      blit_depth_stencil_frag{VK_NULL_HANDLE},
       // Texture filtering shader modules
       bicubic_frag{Compile(HostShaders::BICUBIC_FRAG, vk::ShaderStageFlagBits::eFragment, device)},
       scale_force_frag{
@@ -262,9 +262,15 @@ BlitHelper::BlitHelper(const Instance& instance_, Scheduler& scheduler_,
       d24s8_to_rgba8_pipeline{MakeComputePipeline(d24s8_to_rgba8_comp, compute_pipeline_layout)},
       depth_to_buffer_pipeline{
           MakeComputePipeline(depth_to_buffer_comp, compute_buffer_pipeline_layout)},
-      depth_blit_pipeline{MakeDepthStencilBlitPipeline()},
+      depth_blit_pipeline{VK_NULL_HANDLE},
       linear_sampler{device.createSampler(SAMPLER_CREATE_INFO<vk::Filter::eLinear>)},
       nearest_sampler{device.createSampler(SAMPLER_CREATE_INFO<vk::Filter::eNearest>)} {
+
+    if (instance.IsShaderStencilExportSupported()) {
+        blit_depth_stencil_frag = Compile(HostShaders::VULKAN_BLIT_DEPTH_STENCIL_FRAG,
+                                          vk::ShaderStageFlagBits::eFragment, device);
+        depth_blit_pipeline = MakeDepthStencilBlitPipeline();
+    }
 
     if (instance.HasDebuggingToolAttached()) {
         SetObjectName(device, compute_pipeline_layout, "BlitHelper: compute_pipeline_layout");
@@ -272,10 +278,16 @@ BlitHelper::BlitHelper(const Instance& instance_, Scheduler& scheduler_,
                       "BlitHelper: compute_buffer_pipeline_layout");
         SetObjectName(device, two_textures_pipeline_layout,
                       "BlitHelper: two_textures_pipeline_layout");
+        SetObjectName(device, single_texture_pipeline_layout,
+                      "BlitHelper: single_texture_pipeline_layout");
+        SetObjectName(device, three_textures_pipeline_layout,
+                      "BlitHelper: three_textures_pipeline_layout");
         SetObjectName(device, full_screen_vert, "BlitHelper: full_screen_vert");
         SetObjectName(device, d24s8_to_rgba8_comp, "BlitHelper: d24s8_to_rgba8_comp");
         SetObjectName(device, depth_to_buffer_comp, "BlitHelper: depth_to_buffer_comp");
-        SetObjectName(device, blit_depth_stencil_frag, "BlitHelper: blit_depth_stencil_frag");
+        if (blit_depth_stencil_frag) {
+            SetObjectName(device, blit_depth_stencil_frag, "BlitHelper: blit_depth_stencil_frag");
+        }
         SetObjectName(device, d24s8_to_rgba8_pipeline, "BlitHelper: d24s8_to_rgba8_pipeline");
         SetObjectName(device, depth_to_buffer_pipeline, "BlitHelper: depth_to_buffer_pipeline");
         if (depth_blit_pipeline) {
@@ -287,6 +299,10 @@ BlitHelper::BlitHelper(const Instance& instance_, Scheduler& scheduler_,
 }
 
 BlitHelper::~BlitHelper() {
+    for (const auto& [_, pipeline] : filter_pipeline_cache) {
+        device.destroyPipeline(pipeline);
+    }
+    filter_pipeline_cache.clear();
     device.destroyPipelineLayout(compute_pipeline_layout);
     device.destroyPipelineLayout(compute_buffer_pipeline_layout);
     device.destroyPipelineLayout(two_textures_pipeline_layout);
@@ -295,7 +311,9 @@ BlitHelper::~BlitHelper() {
     device.destroyShaderModule(full_screen_vert);
     device.destroyShaderModule(d24s8_to_rgba8_comp);
     device.destroyShaderModule(depth_to_buffer_comp);
-    device.destroyShaderModule(blit_depth_stencil_frag);
+    if (blit_depth_stencil_frag) {
+        device.destroyShaderModule(blit_depth_stencil_frag);
+    }
     // Destroy texture filtering shader modules
     device.destroyShaderModule(bicubic_frag);
     device.destroyShaderModule(scale_force_frag);
@@ -583,10 +601,6 @@ vk::Pipeline BlitHelper::MakeComputePipeline(vk::ShaderModule shader, vk::Pipeli
 }
 
 vk::Pipeline BlitHelper::MakeDepthStencilBlitPipeline() {
-    if (!instance.IsShaderStencilExportSupported()) {
-        return VK_NULL_HANDLE;
-    }
-
     const std::array stages = MakeStages(full_screen_vert, blit_depth_stencil_frag);
     const auto renderpass = renderpass_cache.GetRenderpass(VideoCore::PixelFormat::Invalid,
                                                            VideoCore::PixelFormat::D24S8, false);
@@ -618,13 +632,9 @@ vk::Pipeline BlitHelper::MakeDepthStencilBlitPipeline() {
 
 bool BlitHelper::Filter(Surface& surface, const VideoCore::TextureBlit& blit) {
     const auto filter = Settings::values.texture_filter.GetValue();
-    const bool is_depth =
-        surface.type == VideoCore::SurfaceType::Depth ||
-        surface.type == VideoCore::SurfaceType::DepthStencil; // Skip filtering for depth textures
-                                                              // and when no filter is selected
-    if (filter == Settings::TextureFilter::NoFilter || is_depth) {
+    if (filter == Settings::TextureFilter::NoFilter) {
         return false;
-    } // Only filter base mipmap level
+    }
     if (blit.src_level != 0) {
         return true;
     }
@@ -653,50 +663,50 @@ bool BlitHelper::Filter(Surface& surface, const VideoCore::TextureBlit& blit) {
 }
 
 void BlitHelper::FilterAnime4K(Surface& surface, const VideoCore::TextureBlit& blit) {
-    const bool is_depth = surface.type == VideoCore::SurfaceType::Depth ||
-                          surface.type == VideoCore::SurfaceType::DepthStencil;
-    const auto color_format = is_depth ? VideoCore::PixelFormat::Invalid : surface.pixel_format;
-    auto pipeline = MakeFilterPipeline(refine_frag, three_textures_pipeline_layout, color_format);
-    FilterPassThreeTextures(surface, surface, surface, surface, pipeline,
-                            three_textures_pipeline_layout, blit);
+    auto pipeline =
+        MakeFilterPipeline(refine_frag, three_textures_pipeline_layout, surface.pixel_format);
+    FilterPassThreeTextures(surface, pipeline, three_textures_pipeline_layout, blit);
 }
 
 void BlitHelper::FilterBicubic(Surface& surface, const VideoCore::TextureBlit& blit) {
-    const bool is_depth = surface.type == VideoCore::SurfaceType::Depth ||
-                          surface.type == VideoCore::SurfaceType::DepthStencil;
-    const auto color_format = is_depth ? VideoCore::PixelFormat::Invalid : surface.pixel_format;
-    auto pipeline = MakeFilterPipeline(bicubic_frag, single_texture_pipeline_layout, color_format);
-    FilterPass(surface, surface, pipeline, single_texture_pipeline_layout, blit);
+    auto pipeline =
+        MakeFilterPipeline(bicubic_frag, single_texture_pipeline_layout, surface.pixel_format);
+    FilterPass(surface, pipeline, single_texture_pipeline_layout, blit);
 }
 
 void BlitHelper::FilterScaleForce(Surface& surface, const VideoCore::TextureBlit& blit) {
-    const bool is_depth = surface.type == VideoCore::SurfaceType::Depth ||
-                          surface.type == VideoCore::SurfaceType::DepthStencil;
-    const auto color_format = is_depth ? VideoCore::PixelFormat::Invalid : surface.pixel_format;
     auto pipeline =
-        MakeFilterPipeline(scale_force_frag, single_texture_pipeline_layout, color_format);
-    FilterPass(surface, surface, pipeline, single_texture_pipeline_layout, blit);
+        MakeFilterPipeline(scale_force_frag, single_texture_pipeline_layout, surface.pixel_format);
+    FilterPass(surface, pipeline, single_texture_pipeline_layout, blit);
 }
 
 void BlitHelper::FilterXbrz(Surface& surface, const VideoCore::TextureBlit& blit) {
-    const bool is_depth = surface.type == VideoCore::SurfaceType::Depth ||
-                          surface.type == VideoCore::SurfaceType::DepthStencil;
-    const auto color_format = is_depth ? VideoCore::PixelFormat::Invalid : surface.pixel_format;
-    auto pipeline = MakeFilterPipeline(xbrz_frag, single_texture_pipeline_layout, color_format);
-    FilterPass(surface, surface, pipeline, single_texture_pipeline_layout, blit);
+    auto pipeline =
+        MakeFilterPipeline(xbrz_frag, single_texture_pipeline_layout, surface.pixel_format);
+    FilterPass(surface, pipeline, single_texture_pipeline_layout, blit);
 }
 
 void BlitHelper::FilterMMPX(Surface& surface, const VideoCore::TextureBlit& blit) {
-    const bool is_depth = surface.type == VideoCore::SurfaceType::Depth ||
-                          surface.type == VideoCore::SurfaceType::DepthStencil;
-    const auto color_format = is_depth ? VideoCore::PixelFormat::Invalid : surface.pixel_format;
-    auto pipeline = MakeFilterPipeline(mmpx_frag, single_texture_pipeline_layout, color_format);
-    FilterPass(surface, surface, pipeline, single_texture_pipeline_layout, blit);
+    auto pipeline =
+        MakeFilterPipeline(mmpx_frag, single_texture_pipeline_layout, surface.pixel_format);
+    FilterPass(surface, pipeline, single_texture_pipeline_layout, blit);
 }
 
 vk::Pipeline BlitHelper::MakeFilterPipeline(vk::ShaderModule fragment_shader,
                                             vk::PipelineLayout layout,
                                             VideoCore::PixelFormat color_format) {
+
+    const VkShaderModule c_shader = static_cast<VkShaderModule>(fragment_shader);
+    const VkPipelineLayout c_layout = static_cast<VkPipelineLayout>(layout);
+    const u64 cache_key = Common::HashCombine(
+        Common::HashCombine(static_cast<u64>(reinterpret_cast<uintptr_t>(c_shader)),
+                            static_cast<u64>(reinterpret_cast<uintptr_t>(c_layout))),
+        static_cast<u64>(color_format));
+
+    if (const auto it = filter_pipeline_cache.find(cache_key); it != filter_pipeline_cache.end()) {
+        return it->second;
+    }
+
     const std::array stages = MakeStages(full_screen_vert, fragment_shader);
     // Use the provided color format for render pass compatibility
     const auto renderpass =
@@ -720,38 +730,38 @@ vk::Pipeline BlitHelper::MakeFilterPipeline(vk::ShaderModule fragment_shader,
 
     if (const auto result = device.createGraphicsPipeline({}, pipeline_info);
         result.result == vk::Result::eSuccess) {
-        return result.value;
+        const vk::Pipeline pipeline = result.value;
+        filter_pipeline_cache.emplace(cache_key, pipeline);
+        return pipeline;
     } else {
         LOG_CRITICAL(Render_Vulkan, "Filter pipeline creation failed!");
         UNREACHABLE();
     }
 }
 
-void BlitHelper::FilterPass(Surface& source, Surface& dest, vk::Pipeline pipeline,
-                            vk::PipelineLayout layout, const VideoCore::TextureBlit& blit) {
+void BlitHelper::FilterPass(Surface& surface, vk::Pipeline pipeline, vk::PipelineLayout layout,
+                            const VideoCore::TextureBlit& blit) {
     const auto texture_descriptor_set = single_texture_provider.Commit();
-    update_queue.AddImageSampler(texture_descriptor_set, 0, 0, source.ImageView(0), linear_sampler,
+    update_queue.AddImageSampler(texture_descriptor_set, 0, 0,
+                                 surface.ImageView(ViewType::Sample, Type::Base), linear_sampler,
                                  vk::ImageLayout::eGeneral);
 
-    const bool is_depth = dest.type == VideoCore::SurfaceType::Depth ||
-                          dest.type == VideoCore::SurfaceType::DepthStencil;
-    const auto color_format = is_depth ? VideoCore::PixelFormat::Invalid : dest.pixel_format;
-    const auto depth_format = is_depth ? dest.pixel_format : VideoCore::PixelFormat::Invalid;
-    const auto renderpass = renderpass_cache.GetRenderpass(color_format, depth_format, false);
+    const auto renderpass = renderpass_cache.GetRenderpass(surface.pixel_format,
+                                                           VideoCore::PixelFormat::Invalid, false);
 
     const RenderPass render_pass = {
-        .framebuffer = dest.Framebuffer(),
+        .framebuffer = surface.Framebuffer(),
         .render_pass = renderpass,
         .render_area =
             {
                 .offset = {0, 0},
-                .extent = {dest.GetScaledWidth(), dest.GetScaledHeight()},
+                .extent = {surface.GetScaledWidth(), surface.GetScaledHeight()},
             },
     };
     renderpass_cache.BeginRendering(render_pass);
-    const float src_scale = static_cast<float>(source.GetResScale());
+    const float src_scale = static_cast<float>(surface.GetResScale());
     // Calculate normalized texture coordinates like OpenGL does
-    const auto src_extent = source.RealExtent(false); // Get unscaled texture extent
+    const auto src_extent = surface.RealExtent(false); // Get unscaled texture extent
     const float tex_scale_x =
         static_cast<float>(blit.src_rect.GetWidth()) / static_cast<float>(src_extent.width);
     const float tex_scale_y =
@@ -806,39 +816,38 @@ void BlitHelper::FilterPass(Surface& source, Surface& dest, vk::Pipeline pipelin
     scheduler.MakeDirty(StateFlags::Pipeline);
 }
 
-void BlitHelper::FilterPassThreeTextures(Surface& source1, Surface& source2, Surface& source3,
-                                         Surface& dest, vk::Pipeline pipeline,
+void BlitHelper::FilterPassThreeTextures(Surface& surface, vk::Pipeline pipeline,
                                          vk::PipelineLayout layout,
                                          const VideoCore::TextureBlit& blit) {
     const auto texture_descriptor_set = three_textures_provider.Commit();
 
-    update_queue.AddImageSampler(texture_descriptor_set, 0, 0, source1.ImageView(0), linear_sampler,
+    update_queue.AddImageSampler(texture_descriptor_set, 0, 0,
+                                 surface.ImageView(ViewType::Sample, Type::Base), linear_sampler,
                                  vk::ImageLayout::eGeneral);
-    update_queue.AddImageSampler(texture_descriptor_set, 1, 0, source2.ImageView(0), linear_sampler,
+    update_queue.AddImageSampler(texture_descriptor_set, 1, 0,
+                                 surface.ImageView(ViewType::Sample, Type::Base), linear_sampler,
                                  vk::ImageLayout::eGeneral);
-    update_queue.AddImageSampler(texture_descriptor_set, 2, 0, source3.ImageView(0), linear_sampler,
+    update_queue.AddImageSampler(texture_descriptor_set, 2, 0,
+                                 surface.ImageView(ViewType::Sample, Type::Base), linear_sampler,
                                  vk::ImageLayout::eGeneral);
 
-    const bool is_depth = dest.type == VideoCore::SurfaceType::Depth ||
-                          dest.type == VideoCore::SurfaceType::DepthStencil;
-    const auto color_format = is_depth ? VideoCore::PixelFormat::Invalid : dest.pixel_format;
-    const auto depth_format = is_depth ? dest.pixel_format : VideoCore::PixelFormat::Invalid;
-    const auto renderpass = renderpass_cache.GetRenderpass(color_format, depth_format, false);
+    const auto renderpass = renderpass_cache.GetRenderpass(surface.pixel_format,
+                                                           VideoCore::PixelFormat::Invalid, false);
 
     const RenderPass render_pass = {
-        .framebuffer = dest.Framebuffer(),
+        .framebuffer = surface.Framebuffer(),
         .render_pass = renderpass,
         .render_area =
             {
                 .offset = {0, 0},
-                .extent = {dest.GetScaledWidth(), dest.GetScaledHeight()},
+                .extent = {surface.GetScaledWidth(), surface.GetScaledHeight()},
             },
     };
     renderpass_cache.BeginRendering(render_pass);
 
-    const float src_scale = static_cast<float>(source1.GetResScale());
+    const float src_scale = static_cast<float>(surface.GetResScale());
     // Calculate normalized texture coordinates like OpenGL does
-    const auto src_extent = source1.RealExtent(false); // Get unscaled texture extent
+    const auto src_extent = surface.RealExtent(false); // Get unscaled texture extent
     const float tex_scale_x =
         static_cast<float>(blit.src_rect.GetWidth()) / static_cast<float>(src_extent.width);
     const float tex_scale_y =

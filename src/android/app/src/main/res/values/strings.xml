@@ -36,7 +36,6 @@
     <string name="select_citra_user_folder_home_description">Changes the files that Azahar uses to load applications</string>
     <string name="theme_and_color_description">Modify the look of the app</string>
     <string name="install_cia_title">Install CIA</string>
-    <string name="warning_3ds_files"><![CDATA[Encrypted files and .3ds files are no longer supported. Decrypting and/or renaming to .cci may be necessary. <a href="https://azahar-emu.org/blog/game-loading-changes/">Learn more.</a>]]></string>
 
     <!-- GPU driver installation -->
     <string name="select_gpu_driver">Select GPU driver</string>
@@ -120,9 +119,17 @@
     <string name="search_installed">Installed</string>
 
     <!-- Input related strings -->
+    <string name="controller_auto_map">Auto-Map Controller</string>
+    <string name="controller_auto_map_description">Apply standard gamepad mapping for all buttons and axes</string>
+    <string name="auto_map_prompt">Press this button on your controller!</string>
+    <string name="auto_map_image_description">3DS face button diamond with A button highlighted</string>
+    <string name="controller_clear_all">Clear All Bindings</string>
+    <string name="controller_clear_all_confirm">This will remove all current controller bindings.</string>
     <string name="controller_circlepad">Circle Pad</string>
     <string name="controller_c">C-Stick</string>
     <string name="controller_hotkeys">Hotkeys</string>
+    <string name="controller_hotkeys_description">If the "Hotkey Enable" key is mapped, that key must be pressed in addition to the mapped hotkey</string>
+    <string name="controller_hotkey_enable_button">Hotkey Enable</string>
     <string name="controller_triggers">Triggers</string>
     <string name="controller_trigger">Trigger</string>
     <string name="controller_dpad">D-Pad</string>
@@ -130,8 +137,8 @@
     <string name="controller_dpad_axis_description">Some controllers may not be able to map their D-pad as an axis. If that\'s the case, use the D-Pad (buttons) section.</string>
     <string name="controller_dpad_button">D-Pad (Button)</string>
     <string name="controller_dpad_button_description">Only map the D-pad to these if you\'re facing issues with the D-Pad (Axis) button mappings.</string>
-    <string name="controller_axis_vertical">Up/Down Axis</string>
-    <string name="controller_axis_horizontal">Left/Right Axis</string>
+    <string name="controller_axis_vertical">Vertical Axis</string>
+    <string name="controller_axis_horizontal">Horizontal Axis</string>
     <string name="direction_up">Up</string>
     <string name="direction_down">Down</string>
     <string name="direction_left">Left</string>
@@ -140,8 +147,8 @@
     <string name="input_dialog_description">Press or move an input.</string>
     <string name="input_binding">Input Binding</string>
     <string name="input_binding_description">Press or move an input to bind it to %1$s.</string>
-    <string name="input_binding_description_vertical_axis">Move your joystick down</string>
-    <string name="input_binding_description_horizontal_axis">Move your joystick right</string>
+    <string name="input_binding_description_vertical_axis">Press UP on your joystick.</string>
+    <string name="input_binding_description_horizontal_axis">Press RIGHT on your joystick.</string>
     <string name="button_a" translatable="false">A</string>
     <string name="button_b" translatable="false">B</string>
     <string name="button_select" translatable="false">SELECT</string>
@@ -251,6 +258,8 @@
     <string name="async_shaders_description">Compiles shaders in the background to reduce stuttering during gameplay. When enabled expect temporary graphical glitches</string>
     <string name="linear_filtering">Linear Filtering</string>
     <string name="linear_filtering_description">Enables linear filtering, which causes game visuals to appear smoother.</string>
+    <string name="use_integer_scaling">Integer Scaling</string>
+    <string name="use_integer_scaling_description">Scales the screens with an integer multiplier of the original 3DS screen. For layouts with two different screen sizes, the largest screen is integer-scaled.</string>
     <string name="texture_filter_name">Texture Filter</string>
     <string name="texture_filter_description">Enhances the visuals of applications by applying a filter to textures. The supported filters are Anime4K Ultrafast, Bicubic, ScaleForce, xBRZ freescale, and MMPX.</string>
     <string name="delay_render_thread">Delay Game Render Thread</string>
@@ -348,6 +357,8 @@
     <string name="deterministic_async_operations_description">Makes async operations deterministic for debugging. Enabling this may cause freezes.</string>
     <string name="enable_rpc_server">Enable RPC Server</string>
     <string name="enable_rpc_server_desc">Enables the RPC server on port 45987. This allows remotely reading/writing guest memory.</string>
+    <string name="toggle_unique_data_console_type">Toggle unique data console type</string>
+    <string name="toggle_unique_data_console_type_desc">Toggles the unique data console type (Old 3DS &#8596; New 3DS) to be able to download the opposite system firmware type from system settings.</string>
     <string name="shader_jit">Enable Shader JIT</string>
     <string name="shader_jit_description">Use the JIT engine instead of the interpreter for software shader emulation.</string>
 
@@ -358,6 +369,8 @@
     <string name="layout_screen_orientation_landscape_reverse">Reverse Landscape</string>
     <string name="layout_screen_orientation_portrait">Portrait</string>
     <string name="layout_screen_orientation_portrait_reverse">Reverse Portrait</string>
+    <string name="layouts_to_cycle">Layouts to Cycle</string>
+    <string name="layouts_to_cycle_description">Which layouts are cycled by the Cycle Layout hotkey</string>
     <string name="aspect_ratio_default">Default</string>
     <string name="aspect_ratio_16_9">16:9</string>
     <string name="aspect_ratio_4_3">4:3</string>
@@ -378,7 +391,7 @@
     <string name="learn_more">Learn More</string>
     <string name="close">Close</string>
     <string name="reset_to_default">Reset to Default</string>
-    <string name="redump_games"><![CDATA[Please follow the guides to redump your <a href="https://web.archive.org/web/20240304210021/https://citra-emu.org/wiki/dumping-game-cartridges/">game cartidges</a> or <a href="https://web.archive.org/web/20240304210011/https://citra-emu.org/wiki/dumping-installed-titles/">installed titles</a>.]]></string>
+    <string name="redump_games"><![CDATA[Please follow the guides to redump your <a href="https://web.archive.org/web/20240304210021/https://citra-emu.org/wiki/dumping-game-cartridges/">game cartridges</a> or <a href="https://web.archive.org/web/20240304210011/https://citra-emu.org/wiki/dumping-installed-titles/">installed titles</a>.]]></string>
     <string name="option_default">Default</string>
     <string name="none">None</string>
     <string name="auto">Auto</string>
@@ -398,8 +411,6 @@
     <string name="auto_select">Auto-Select</string>
     <string name="start">Start</string>
     <string name="cancelling">Cancelling…</string>
-    <string name="important">Important</string>
-    <string name="dont_show_again">Don\'t show again</string>
     <string name="visibility">Visibility</string>
     <string name="information">Information</string>
 
@@ -574,7 +585,7 @@
 
     <!-- Disk Shader Cache -->
     <string name="preparing_shaders">Preparing Shaders</string>
-    <string name="building_shaders">Building Shaders</string>
+    <string name="building_shaders">Building %s</string>
 
     <!-- About Game Dialog -->
     <string name="play">Play</string>

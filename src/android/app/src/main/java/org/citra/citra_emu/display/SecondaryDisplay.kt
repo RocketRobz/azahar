@@ -6,18 +6,15 @@ package org.citra.citra_emu.display
 
 import android.app.Presentation
 import android.content.Context
-import android.graphics.SurfaceTexture
 import android.hardware.display.DisplayManager
 import android.hardware.display.VirtualDisplay
 import android.os.Bundle
 import android.view.Display
 import android.view.MotionEvent
-import android.view.Surface
 import android.view.SurfaceHolder
 import android.view.SurfaceView
 import android.view.WindowManager
 import org.citra.citra_emu.features.settings.model.IntSetting
-import org.citra.citra_emu.display.SecondaryDisplayLayout
 import org.citra.citra_emu.NativeLibrary
 
 class SecondaryDisplay(val context: Context) : DisplayManager.DisplayListener {
@@ -50,7 +47,7 @@ class SecondaryDisplay(val context: Context) : DisplayManager.DisplayListener {
         val currentDisplayId = context.display.displayId
         val displays = dm.displays
         val presDisplays = dm.getDisplays(DisplayManager.DISPLAY_CATEGORY_PRESENTATION);
-        return displays.firstOrNull {
+        val extDisplays = displays.filter {
             val isPresentable = presDisplays.any { pd -> pd.displayId == it.displayId }
             val isNotDefaultOrPresentable = it.displayId != Display.DEFAULT_DISPLAY || isPresentable
             isNotDefaultOrPresentable &&
@@ -59,9 +56,18 @@ class SecondaryDisplay(val context: Context) : DisplayManager.DisplayListener {
                     it.state != Display.STATE_OFF &&
                     it.isValid
         }
+        // if there is a display called Built-In Display or Built-In Screen, prioritize the OTHER screen
+        val selected = extDisplays.firstOrNull { ! it.name.contains("Built",true) }
+            ?: extDisplays.firstOrNull()
+        return selected
     }
 
     fun updateDisplay() {
+        // return early if the parent context is dead or dying
+        if (context is android.app.Activity && (context.isFinishing || context.isDestroyed)) {
+            return
+        }
+
         // decide if we are going to the external display or the internal one
         var display = getExternalDisplay(context)
         if (display == null ||
@@ -74,12 +80,25 @@ class SecondaryDisplay(val context: Context) : DisplayManager.DisplayListener {
 
         // otherwise, make a new presentation
         releasePresentation()
-        pres = SecondaryDisplayPresentation(context, display!!, this)
-        pres?.show()
+
+        try {
+            pres = SecondaryDisplayPresentation(context, display!!, this)
+            pres?.show()
+        }
+        // catch BadTokenException and InvalidDisplayException,
+        // the display became invalid asynchronously, so we can assign to null
+        // until onDisplayAdded/Removed/Changed is called and logic retriggered
+        catch (_: WindowManager.BadTokenException) {
+            pres = null
+        } catch (_: WindowManager.InvalidDisplayException) {
+            pres = null
+        }
     }
 
     fun releasePresentation() {
-        pres?.dismiss()
+        try {
+            pres?.dismiss()
+        } catch (_: Exception) { }
         pres = null
     }
 

@@ -10,7 +10,6 @@ import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.view.InputDevice
 import android.view.KeyEvent
@@ -21,6 +20,7 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.net.toUri
 import androidx.core.os.BundleCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -43,6 +43,7 @@ import org.citra.citra_emu.features.settings.model.view.InputBindingSetting
 import org.citra.citra_emu.fragments.EmulationFragment
 import org.citra.citra_emu.fragments.MessageDialogFragment
 import org.citra.citra_emu.model.Game
+import org.citra.citra_emu.utils.BuildUtil
 import org.citra.citra_emu.utils.ControllerMappingHelper
 import org.citra.citra_emu.utils.FileBrowserHelper
 import org.citra.citra_emu.utils.EmulationLifecycleUtil
@@ -267,41 +268,34 @@ class EmulationActivity : AppCompatActivity() {
             return super.dispatchKeyEvent(event)
         }
 
-        val button =
-            preferences.getInt(InputBindingSetting.getInputButtonKey(event.keyCode), event.keyCode)
-        val action: Int = when (event.action) {
+        when (event.action) {
             KeyEvent.ACTION_DOWN -> {
-                hotkeyUtility.handleHotkey(button)
-
                 // On some devices, the back gesture / button press is not intercepted by androidx
                 // and fails to open the emulation menu. So we're stuck running deprecated code to
                 // cover for either a fault on androidx's side or in OEM skins (MIUI at least)
+
                 if (event.keyCode == KeyEvent.KEYCODE_BACK) {
                     // If the hotkey is pressed, we don't want to open the drawer
-                    if (!hotkeyUtility.HotkeyIsPressed) {
+                    if (!hotkeyUtility.hotkeyIsPressed) {
                         onBackPressed()
+                        return true
                     }
                 }
-
-                // Normal key events.
-                NativeLibrary.ButtonState.PRESSED
+                return hotkeyUtility.handleKeyPress(event)
             }
-
             KeyEvent.ACTION_UP -> {
-                hotkeyUtility.HotkeyIsPressed = false
-                NativeLibrary.ButtonState.RELEASED
+                return hotkeyUtility.handleKeyRelease(event)
             }
-            else -> return false
+            else -> {
+                return false;
+            }
         }
-        val input = event.device
-            ?: // Controller was disconnected
-            return false
-        return NativeLibrary.onGamePadEvent(input.descriptor, button, action)
     }
 
     private fun onAmiiboSelected(selectedFile: String) {
         val success = NativeLibrary.loadAmiibo(selectedFile)
         if (!success) {
+            Log.error("[EmulationActivity] Failed to load Amiibo file: $selectedFile")
             MessageDialogFragment.newInstance(
                 R.string.amiibo_load_error,
                 R.string.amiibo_load_error_message
@@ -524,13 +518,19 @@ class EmulationActivity : AppCompatActivity() {
         return true
     }
 
-    val openFileLauncher =
+    val openAmiiboFileLauncher =
         registerForActivityResult(OpenFileResultContract()) { result: Intent? ->
             if (result == null) return@registerForActivityResult
             val selectedFiles = FileBrowserHelper.getSelectedFiles(
                 result, applicationContext, listOf<String>("bin")
             ) ?: return@registerForActivityResult
-            onAmiiboSelected(selectedFiles[0])
+            if (BuildUtil.isGooglePlayBuild) {
+                onAmiiboSelected(selectedFiles[0])
+            } else {
+                val fileUri = selectedFiles[0].toUri()
+                val nativePath = "!" + NativeLibrary.getNativePath(fileUri)
+                onAmiiboSelected(nativePath)
+            }
         }
 
     val openImageLauncher =

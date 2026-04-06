@@ -51,6 +51,9 @@ public:
 
     std::shared_ptr<AppletManager> GetAppletManager() const;
 
+    std::vector<u8> GetWirelessRebootInfoBuffer() const;
+    void SetWirelessRebootInfoBuffer(std::vector<u8> info_buf);
+
     class NSInterface : public ServiceFramework<NSInterface> {
     public:
         NSInterface(std::shared_ptr<Module> apt, const char* name, u32 max_session);
@@ -1085,8 +1088,6 @@ private:
     std::shared_ptr<Kernel::SharedMemory> shared_font_mem;
     bool shared_font_loaded = false;
     bool shared_font_relocated = false;
-
-    u32 cpu_percent = 0; ///< CPU time available to the running application
 
     ScreencapPostPermission screen_capture_post_permission =
         ScreencapPostPermission::CleanThePermission; // TODO(JamePeng): verify the initial value

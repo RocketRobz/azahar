@@ -55,6 +55,12 @@ HackManager hack_manager = {
                      0x00040000001D1400, // USA
                      0x00040000001D1500, // EUR
                      0x00040000001CA900, // JPN
+
+                     // Mario & Luigi: Paper Jam
+                     0x0004000000132600, // JPN
+                     0x0004000000132700, // USA
+                     0x0004000000132800, // EUR
+                     0x000400000018A100, // EUR (Demo)
                  },
          }},
 
@@ -181,6 +187,16 @@ HackManager hack_manager = {
                      0x00040000001AA300, // 3 (JPN)
                  },
          }},
-
+        {HackType::SPOOF_FRIEND_CODE_SEED,
+         HackEntry{
+             .mode = HackAllowMode::FORCE,
+             .affected_title_ids =
+                 {
+                     // Luigi's Mansion 3ds
+                     0x00040000001D1800, // JPN
+                     0x00040000001D1900, // USA
+                     0x00040000001D1A00, // EUR
+                 },
+         }},
     }};
 }

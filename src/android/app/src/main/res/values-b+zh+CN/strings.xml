@@ -32,7 +32,6 @@
     <string name="select_citra_user_folder_home_description">更改 Azahar 用于加载应用的相关文件</string>
     <string name="theme_and_color_description">更改应用程序的外观</string>
     <string name="install_cia_title">安装 CIA</string>
-    <string name="warning_3ds_files"><![CDATA[加密文件和 3ds 后缀名文件不再受支持。可能需要解密和/或重命名为 cci 后缀名。<a href=\"https://azahar-emu.org/blog/game-loading-changes/\">了解详情。</a>]]></string>
 
     <!-- GPU driver installation -->
     <string name="select_gpu_driver">选择 GPU 驱动</string>
@@ -101,7 +100,6 @@
     <string name="search_recently_added">最近添加</string>
     <string name="search_installed">已安装</string>
 
-    <!-- Input related strings -->
     <string name="controller_circlepad">方向摇杆</string>
     <string name="controller_c">C 摇杆</string>
     <string name="controller_hotkeys">热键</string>
@@ -112,8 +110,6 @@
     <string name="controller_dpad_axis_description">有些控制器可能无法将其方向键映射为轴。如果是这种情况，只能使用方向键（按键）部分。</string>
     <string name="controller_dpad_button">十字键（按键）</string>
     <string name="controller_dpad_button_description">仅当您在方向键 (轴) 映射遇到问题时，才将方向键映射到这些按键。</string>
-    <string name="controller_axis_vertical">上/下轴</string>
-    <string name="controller_axis_horizontal">左/右轴</string>
     <string name="direction_up">上</string>
     <string name="direction_down">下</string>
     <string name="direction_left">左</string>
@@ -338,7 +334,6 @@
     <string name="learn_more">了解更多</string>
     <string name="close">关闭</string>
     <string name="reset_to_default">恢复默认</string>
-    <string name="redump_games"><![CDATA[请按照指南以转储您的<a href=\"https://web.archive.org/web/20240304210021/https://citra-emu.org/wiki/dumping-game-cartridges/\">游戏卡带</a>或<a href=\"https://web.archive.org/web/20240304210011/https://citra-emu.org/wiki/dumping-installed-titles/\">已安装的应用</a>。]]></string>
     <string name="option_default">默认</string>
     <string name="none">无</string>
     <string name="auto">自动</string>
@@ -358,8 +353,6 @@
     <string name="auto_select">自动选择</string>
     <string name="start">开始</string>
     <string name="cancelling">取消中…</string>
-    <string name="important">重要提示</string>
-    <string name="dont_show_again">不再显示</string>
     <string name="visibility">可见度</string>
     <string name="information">信息</string>
 
@@ -533,8 +526,6 @@
     <string name="unsupported_encrypted">不支持的加密应用</string>
     <!-- Disk Shader Cache -->
     <string name="preparing_shaders">正在准备着色器</string>
-    <string name="building_shaders">正在构建着色器</string>
-
     <!-- About Game Dialog -->
     <string name="play">开始游戏</string>
     <string name="uninstall_cia">卸载应用</string>

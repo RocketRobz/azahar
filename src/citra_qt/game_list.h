@@ -137,10 +137,6 @@ private:
     void changeEvent(QEvent*) override;
     void RetranslateUI();
 
-    QHBoxLayout* warning_layout = nullptr;
-    QWidget* warning_widget = nullptr;
-    QLabel* deprecated_3ds_warning = nullptr;
-    QPushButton* warning_hide = nullptr;
     GameListSearchField* search_field;
     GMainWindow* main_window = nullptr;
     QVBoxLayout* layout = nullptr;
@@ -153,6 +149,8 @@ private:
     friend class GameListSearchField;
 
     const PlayTime::PlayTimeManager& play_time_manager;
+
+    std::chrono::time_point<std::chrono::steady_clock> time_last_refresh;
 };
 
 class GameListPlaceholder : public QWidget {

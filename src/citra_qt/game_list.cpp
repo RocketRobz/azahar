@@ -33,6 +33,8 @@
 #include "citra_qt/game_list_p.h"
 #include "citra_qt/game_list_worker.h"
 #include "citra_qt/uisettings.h"
+#include "common/common_paths.h"
+#include "common/file_util.h"
 #include "common/logging/log.h"
 #include "common/settings.h"
 #include "core/core.h"
@@ -391,40 +393,6 @@ GameList::GameList(PlayTime::PlayTimeManager& play_time_manager_, GMainWindow* p
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
 
-    if (UISettings::values.show_3ds_files_warning.GetValue()) {
-
-        warning_layout = new QHBoxLayout;
-        deprecated_3ds_warning = new QLabel;
-        deprecated_3ds_warning->setText(
-            tr("IMPORTANT: Encrypted files and .3ds files are no longer supported. Decrypting "
-               "and/or renaming to .cci may be necessary. <a "
-               "href='https://azahar-emu.org/blog/game-loading-changes/'>Learn more.</a>"));
-        deprecated_3ds_warning->setOpenExternalLinks(true);
-        deprecated_3ds_warning->setStyleSheet(
-            QString::fromStdString("color: black; font-weight: bold;"));
-
-        warning_hide = new QPushButton(tr("Don't show again"));
-        warning_hide->setStyleSheet(
-            QString::fromStdString("color: blue; text-decoration: underline;"));
-        warning_hide->setFlat(true);
-        warning_hide->setCursor(Qt::PointingHandCursor);
-
-        connect(warning_hide, &QPushButton::clicked, [this]() {
-            warning_widget->setVisible(false);
-            UISettings::values.show_3ds_files_warning.SetValue(false);
-        });
-
-        warning_layout->addWidget(deprecated_3ds_warning);
-        warning_layout->addStretch();
-        warning_layout->addWidget(warning_hide);
-        warning_layout->setContentsMargins(3, 3, 3, 3);
-        warning_widget = new QWidget;
-        warning_widget->setStyleSheet(QString::fromStdString("background-color: khaki;"));
-        warning_widget->setLayout(warning_layout);
-
-        layout->addWidget(warning_widget);
-    }
-
     layout->addWidget(tree_view);
     layout->addWidget(search_field);
     setLayout(layout);
@@ -640,6 +608,36 @@ void ForEachOpenGLCacheFile(u64 program_id, auto func) {
         QFile file{QString::fromStdString(path)};
         func(file);
     }
+    const std::string path =
+        fmt::format("{}opengl/transferable/{:016X}.bin",
+                    FileUtil::GetUserPath(FileUtil::UserPath::ShaderDir), program_id);
+    QFile file{QString::fromStdString(path)};
+    func(file);
+}
+#endif
+
+#ifdef ENABLE_VULKAN
+void ForEachVulkanCacheFile(u64 program_id, auto func) {
+    for (const std::string_view cache_type : {"vs", "fs", "gs", "pl"}) {
+        const std::string path = fmt::format("{}vulkan/transferable/{:016X}_{}.vkch",
+                                             FileUtil::GetUserPath(FileUtil::UserPath::ShaderDir),
+                                             program_id, cache_type);
+        QFile file{QString::fromStdString(path)};
+        func(file);
+    }
+
+    FileUtil::ForeachDirectoryEntry(
+        nullptr,
+        fmt::format("{}vulkan/pipeline", FileUtil::GetUserPath(FileUtil::UserPath::ShaderDir)),
+        [program_id, &func]([[maybe_unused]] u64* num_entries_out, const std::string& directory,
+                            const std::string& virtual_name) {
+            if (virtual_name.starts_with(fmt::format("{:016X}", program_id))) {
+                QFile file{QString::fromStdString(directory + DIR_SEP + virtual_name)};
+                func(file);
+            }
+
+            return true;
+        });
 }
 #endif
 
@@ -676,6 +674,10 @@ void GameList::AddGamePopup(QMenu& context_menu, const QString& path, const QStr
     QAction* delete_opengl_disk_shader_cache =
         shader_menu->addAction(tr("Delete OpenGL Shader Cache"));
 #endif
+#ifdef ENABLE_VULKAN
+    QAction* delete_vulkan_disk_shader_cache =
+        shader_menu->addAction(tr("Delete Vulkan Shader Cache"));
+#endif
 
     QMenu* uninstall_menu = context_menu.addMenu(tr("Uninstall"));
     QAction* uninstall_all = uninstall_menu->addAction(tr("Everything"));
@@ -710,6 +712,12 @@ void GameList::AddGamePopup(QMenu& context_menu, const QString& path, const QStr
     bool opengl_cache_exists = false;
     ForEachOpenGLCacheFile(
         program_id, [&opengl_cache_exists](QFile& file) { opengl_cache_exists |= file.exists(); });
+#endif
+
+#ifdef ENABLE_VULKAN
+    bool vulkan_cache_exists = false;
+    ForEachVulkanCacheFile(
+        program_id, [&vulkan_cache_exists](QFile& file) { vulkan_cache_exists |= file.exists(); });
 #endif
 
     favorite->setVisible(program_id != 0);
@@ -753,6 +761,10 @@ void GameList::AddGamePopup(QMenu& context_menu, const QString& path, const QStr
 
 #ifdef ENABLE_OPENGL
     delete_opengl_disk_shader_cache->setEnabled(opengl_cache_exists);
+#endif
+
+#ifdef ENABLE_VULKAN
+    delete_vulkan_disk_shader_cache->setEnabled(vulkan_cache_exists);
 #endif
 
     uninstall_all->setEnabled(is_installed || has_update || has_dlc);
@@ -833,6 +845,11 @@ void GameList::AddGamePopup(QMenu& context_menu, const QString& path, const QStr
 #ifdef ENABLE_OPENGL
     connect(delete_opengl_disk_shader_cache, &QAction::triggered, this, [program_id] {
         ForEachOpenGLCacheFile(program_id, [](QFile& file) { file.remove(); });
+    });
+#endif
+#ifdef ENABLE_VULKAN
+    connect(delete_vulkan_disk_shader_cache, &QAction::triggered, this, [program_id] {
+        ForEachVulkanCacheFile(program_id, [](QFile& file) { file.remove(); });
     });
 #endif
     connect(uninstall_all, &QAction::triggered, this, [=, this] {
@@ -1107,18 +1124,26 @@ void GameList::LoadInterfaceLayout() {
 }
 
 const QStringList GameList::supported_file_extensions = {
-    QStringLiteral("3dsx"),  QStringLiteral("elf"),  QStringLiteral("axf"),
-    QStringLiteral("cci"),   QStringLiteral("cxi"),  QStringLiteral("app"),
-    QStringLiteral("z3dsx"), QStringLiteral("zcci"), QStringLiteral("zcxi"),
+    QStringLiteral("3dsx"), QStringLiteral("elf"), QStringLiteral("axf"),   QStringLiteral("cci"),
+    QStringLiteral("cxi"),  QStringLiteral("app"), QStringLiteral("z3dsx"), QStringLiteral("zcci"),
+    QStringLiteral("zcxi"), QStringLiteral("3ds"),
 };
 
 void GameList::RefreshGameDirectory() {
-
     // Do not scan directories when the system is powered on, it will be
     // repopulated on shutdown anyways.
     if (Core::System::GetInstance().IsPoweredOn()) {
         return;
     }
+
+    const auto time_now = std::chrono::steady_clock::now();
+
+    // Max of 1 refresh every 1 second.
+    if (time_last_refresh + std::chrono::seconds(1) > time_now) {
+        return;
+    }
+
+    time_last_refresh = time_now;
 
     if (!UISettings::values.game_dirs.isEmpty() && current_worker != nullptr) {
         LOG_INFO(Frontend, "Change detected in the applications directory. Reloading game list.");

@@ -32,7 +32,6 @@
     <string name="select_citra_user_folder_home_description">Ændrer de filer, som Azahar bruger til at indlæse applikationer</string>
     <string name="theme_and_color_description">Rediger appens udseende</string>
     <string name="install_cia_title">Installer CIA</string>
-    <string name="warning_3ds_files"><![CDATA[Krypterede filer og .3ds filer understøttes ikke længere. Det kan være nødvendigt at dekryptere og/eller omdøbe til .cci.<a href=\"https://azahar-emu.org/blog/game-loading-changes/\">Lær mere.</a>]]></string>
 
     <!-- GPU driver installation -->
     <string name="select_gpu_driver">Vælg GPU-driver</string>
@@ -108,7 +107,6 @@
     <string name="search_recently_added">For nyligt tilføjet</string>
     <string name="search_installed">Installeret</string>
 
-    <!-- Input related strings -->
     <string name="controller_circlepad">Circle Pad</string>
     <string name="controller_c">C-Stick</string>
     <string name="controller_hotkeys">Genvejstaster</string>
@@ -119,8 +117,8 @@
     <string name="controller_dpad_axis_description">Nogle kontrollere er muligvis ikke i stand til at tilknytte deres D-Pad som en akse. Hvis det er tilfældet, skal du bruge afsnittet D-Pad (knapper).</string>
     <string name="controller_dpad_button">D-Pad (knapper)</string>
     <string name="controller_dpad_button_description">Udfyld kun disse D-Pad, hvis du har problemer med opsætningen af D-Pad (akser).</string>
-    <string name="controller_axis_vertical">Op/ned akse</string>
-    <string name="controller_axis_horizontal">Venstre/højre akse</string>
+    <string name="controller_axis_vertical">Vertikal akse</string>
+    <string name="controller_axis_horizontal">Horisontal akse</string>
     <string name="direction_up">Op</string>
     <string name="direction_down">Ned</string>
     <string name="direction_left">Venstre</string>
@@ -129,8 +127,8 @@
     <string name="input_dialog_description">Tryk på eller flyt et input.</string>
     <string name="input_binding">Inputbinding</string>
     <string name="input_binding_description">Tryk på eller flyt et input for at binde det til %1$s.</string>
-    <string name="input_binding_description_vertical_axis">Bevæg joysticket ned</string>
-    <string name="input_binding_description_horizontal_axis">Bevæg joysticket til højre</string>
+    <string name="input_binding_description_vertical_axis">Tryk OP på dit joystick.</string>
+    <string name="input_binding_description_horizontal_axis">Tryk HØJRE på dit joystick.</string>
     <string name="button_home">HOME</string>
     <string name="button_swap">Byt skærme</string>
     <string name="button_turbo">Turbo</string>
@@ -357,7 +355,6 @@
     <string name="learn_more">Lær mere</string>
     <string name="close">Luk</string>
     <string name="reset_to_default">Nulstil til standard</string>
-    <string name="redump_games"><![CDATA[Følg venligst vejledningerne for at dumpe dine <a href=\"https://web.archive.org/web/20240304210021/https://citra-emu.org/wiki/dumping-game-cartridges/\">spilkassetter</a> eller <a href=\"https://web.archive.org/web/20240304210011/https://citra-emu.org/wiki/dumping-installed-titles/\">installerede titler</a>.]]></string>
     <string name="option_default">Standard</string>
     <string name="none">Ingen</string>
     <string name="auto">Auto</string>
@@ -377,8 +374,6 @@
     <string name="auto_select">Automatisk valg</string>
     <string name="start">Start</string>
     <string name="cancelling">Annullerer...</string>
-    <string name="important">Vigtig</string>
-    <string name="dont_show_again">Vis ikke igen</string>
     <string name="visibility">Sigtbarhed</string>
     <string name="information">Information</string>
 
@@ -553,8 +548,6 @@
 
     <!-- Disk Shader Cache -->
     <string name="preparing_shaders">Forberedelse af shaders</string>
-    <string name="building_shaders">Bygning af shaders</string>
-
     <!-- About Game Dialog -->
     <string name="play">Spil</string>
     <string name="uninstall_cia">Afinstaller applikation</string>

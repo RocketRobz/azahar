@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <unordered_map>
+
 #include "video_core/rasterizer_cache/pixel_format.h"
 #include "video_core/renderer_vulkan/vk_resource_pool.h"
 
@@ -50,15 +52,14 @@ private:
     void FilterXbrz(Surface& surface, const VideoCore::TextureBlit& blit);
     void FilterMMPX(Surface& surface, const VideoCore::TextureBlit& blit);
 
-    void FilterPass(Surface& source, Surface& dest, vk::Pipeline pipeline,
-                    vk::PipelineLayout layout, const VideoCore::TextureBlit& blit);
+    void FilterPass(Surface& surface, vk::Pipeline pipeline, vk::PipelineLayout layout,
+                    const VideoCore::TextureBlit& blit);
 
-    void FilterPassThreeTextures(Surface& source1, Surface& source2, Surface& source3,
-                                 Surface& dest, vk::Pipeline pipeline, vk::PipelineLayout layout,
+    void FilterPassThreeTextures(Surface& surface, vk::Pipeline pipeline, vk::PipelineLayout layout,
                                  const VideoCore::TextureBlit& blit);
 
-    void FilterPassYGradient(Surface& source, Surface& dest, vk::Pipeline pipeline,
-                             vk::PipelineLayout layout, const VideoCore::TextureBlit& blit);
+    void FilterPassYGradient(Surface& surface, vk::Pipeline pipeline, vk::PipelineLayout layout,
+                             const VideoCore::TextureBlit& blit);
 
 private:
     const Instance& instance;
@@ -95,6 +96,9 @@ private:
     vk::Pipeline depth_blit_pipeline;
     vk::Sampler linear_sampler;
     vk::Sampler nearest_sampler;
+
+    /// Cache of texture filter pipelines (keyed by shader+layout+format hash)
+    std::unordered_map<std::uint64_t, vk::Pipeline> filter_pipeline_cache;
 };
 
 } // namespace Vulkan

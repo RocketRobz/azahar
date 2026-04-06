@@ -32,7 +32,6 @@
     <string name="select_citra_user_folder_home_description">Azahar\'ın uygulama yüklemek için kullandığı dosyaları değiştirir</string>
     <string name="theme_and_color_description">Uygulamanın görünüşünü değiştir</string>
     <string name="install_cia_title">CIA Yükle</string>
-    <string name="warning_3ds_files"><![CDATA[Şifrelenmiş dosyalar ve .3ds dosyaları artık desteklenmemektedir. Dosyanın şifresinin çözülmesi ve/veya .cci olarak yeniden adlandırması gerekli olabilir.<a href=\"https://azahar-emu.org/blog/game-loading-changes/\">Daha fazla öğren.</a>]]></string>
 
     <!-- GPU driver installation -->
     <string name="select_gpu_driver">GPU Sürücüsü seç</string>
@@ -100,7 +99,6 @@
     <string name="search_recently_added">Son eklenen</string>
     <string name="search_installed">Yüklü</string>
 
-    <!-- Input related strings -->
     <string name="controller_circlepad">Circle Pad</string>
     <string name="controller_c">C-Stick</string>
     <string name="controller_hotkeys">Kısayol tuşları</string>
@@ -111,8 +109,6 @@
     <string name="controller_dpad_axis_description">Bazı oyun kolları D-pad\'lerini bir eksen olarak atayamayabilir. Durum buysa D-Pad (butonlar) bölümünü kullanın.</string>
     <string name="controller_dpad_button">D-pad (Buton)</string>
     <string name="controller_dpad_button_description">Sadece D-Pad (Eksen) atamasında sorun yaşıyorsanız D-Pad\'inizi bunlara atayın.</string>
-    <string name="controller_axis_vertical">Yukarı/Aşağı Eksen</string>
-    <string name="controller_axis_horizontal">Sol/Sağ Eksen</string>
     <string name="direction_up">Yukarı</string>
     <string name="direction_down">Aşağı</string>
     <string name="direction_left">Sol</string>
@@ -310,7 +306,6 @@
     <string name="learn_more">Daha Fazla Öğren </string>
     <string name="close">Kapat</string>
     <string name="reset_to_default">Varsayılanlara Sıfırla</string>
-    <string name="redump_games"><![CDATA[Lütfen <a href=\"https://web.archive.org/web/20240304210021/https://citra-emu.org/wiki/dumping-game-cartridges/\">oyun kartuşlarınızı</a> veya <a href=\"https://web.archive.org/web/20240304210011/https://citra-emu.org/wiki/dumping-installed-titles/\">yüklü başlıklarınızı</a>yeniden yüklemek için kılavuzları izleyin.]]></string>
     <string name="option_default">Varsayılan</string>
     <string name="auto">Otomatik</string>
     <string name="off">Kapalı</string>
@@ -329,8 +324,6 @@
     <string name="auto_select">Otomatik Seç</string>
     <string name="start">Başlat</string>
     <string name="cancelling">İptal ediliyor...</string>
-    <string name="important">Önemli</string>
-    <string name="dont_show_again">Tekrar gösterme</string>
     <string name="visibility">Görünürlük</string>
     <string name="information">Bilgi</string>
 
@@ -486,8 +479,6 @@
     <string name="unsupported_encrypted">Desteklenmeyen şifreli uygulama</string>
     <!-- Disk Shader Cache -->
     <string name="preparing_shaders">Gölgelendiriciler Hazırlanıyor</string>
-    <string name="building_shaders">Gölgelendiriciler Oluşturuluyor</string>
-
     <!-- About Game Dialog -->
     <string name="play">Oyna</string>
     <string name="uninstall_cia">Uygulamayı Sil</string>

@@ -11,12 +11,14 @@ import android.content.DialogInterface
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.SharedPreferences
+import android.content.res.Configuration
 import android.net.Uri
 import android.os.BatteryManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.ParcelFileDescriptor
 import android.os.SystemClock
 import android.text.Editable
 import android.text.TextWatcher
@@ -72,6 +74,7 @@ import org.citra.citra_emu.features.settings.model.SettingsViewModel
 import org.citra.citra_emu.features.settings.ui.SettingsActivity
 import org.citra.citra_emu.features.settings.utils.SettingsFile
 import org.citra.citra_emu.model.Game
+import org.citra.citra_emu.utils.BuildUtil
 import org.citra.citra_emu.utils.DirectoryInitialization
 import org.citra.citra_emu.utils.DirectoryInitialization.DirectoryInitializationState
 import org.citra.citra_emu.utils.EmulationMenuSettings
@@ -107,6 +110,9 @@ class EmulationFragment : Fragment(), SurfaceHolder.Callback, Choreographer.Fram
     private val onPause = Runnable{ togglePause() }
     private val onShutdown = Runnable{ emulationState.stop() }
 
+    // Only used if a game is passed through intent on google play variant
+    private var gameFd: Int? = null
+
     override fun onAttach(context: Context) {
         super.onAttach(context)
         if (context is EmulationActivity) {
@@ -124,25 +130,37 @@ class EmulationFragment : Fragment(), SurfaceHolder.Callback, Choreographer.Fram
         super.onCreate(savedInstanceState)
 
         val intent = requireActivity().intent
-        val intentUri: Uri? = intent.data
+        var intentUri: Uri? = intent.data
         val oldIntentInfo = Pair(
             intent.getStringExtra("SelectedGame"),
             intent.getStringExtra("SelectedTitle")
         )
         var intentGame: Game? = null
+        intentUri = if (intentUri == null && oldIntentInfo.first != null) {
+            Uri.parse(oldIntentInfo.first)
+        } else {
+            intentUri
+        }
         if (intentUri != null) {
-            intentGame = if (Game.extensions.contains(FileUtil.getExtension(intentUri))) {
-                GameHelper.getGame(intentUri, isInstalled = false, addedToLibrary = false)
-            } else {
-                null
+            if (!BuildUtil.isGooglePlayBuild) {
+                val intentUriString = intentUri.toString()
+                // We need to build a special path as the incoming URI may be SAF exclusive
+                Log.warning("[EmulationFragment] Cannot determine native path of URI \"" +
+                            intentUriString + "\", using file descriptor instead.")
+                if (!intentUriString.startsWith("!")) {
+                    gameFd = requireContext().contentResolver.openFileDescriptor(intentUri, "r")?.detachFd()
+                    intentUri = if (gameFd != null) {
+                        Uri.parse("fd://" + gameFd.toString())
+                    } else {
+                        null
+                    }
+                }
             }
-        } else if (oldIntentInfo.first != null) {
-            val gameUri = Uri.parse(oldIntentInfo.first)
-            intentGame = if (Game.extensions.contains(FileUtil.getExtension(gameUri))) {
-                GameHelper.getGame(gameUri, isInstalled = false, addedToLibrary = false)
-            } else {
-                null
-            }
+            intentGame =
+                intentUri?.let {
+                    // isInstalled, addedToLibrary and mediaType do not matter here
+                    GameHelper.getGame(it, isInstalled = false, addedToLibrary = false, mediaType = Game.MediaType.GAME_CARD)
+                }
         }
 
         val insertedCartridge = preferences.getString("insertedCartridge", "")
@@ -160,6 +178,8 @@ class EmulationFragment : Fragment(), SurfaceHolder.Callback, Choreographer.Fram
             return
         }
 
+        Log.info("[EmulationFragment] Starting application " + game.path)
+
         // So this fragment doesn't restart on configuration changes; i.e. rotation.
         retainInstance = true
         emulationState = EmulationState(game.path)
@@ -175,6 +195,12 @@ class EmulationFragment : Fragment(), SurfaceHolder.Callback, Choreographer.Fram
         savedInstanceState: Bundle?
     ): View {
         _binding = FragmentEmulationBinding.inflate(inflater)
+        binding.inGameMenu.menu.findItem(R.id.menu_landscape_screen_layout).isVisible =
+            CitraApplication.appContext.resources.configuration.orientation !=
+                    Configuration.ORIENTATION_PORTRAIT
+        binding.inGameMenu.menu.findItem(R.id.menu_portrait_screen_layout).isVisible =
+            CitraApplication.appContext.resources.configuration.orientation ==
+                    Configuration.ORIENTATION_PORTRAIT
         return binding.root
     }
 
@@ -479,7 +505,7 @@ class EmulationFragment : Fragment(), SurfaceHolder.Callback, Choreographer.Fram
         super.onResume()
         Choreographer.getInstance().postFrameCallback(this)
         if (NativeLibrary.isRunning()) {
-            emulationState.pause()
+            emulationState.unpause()
 
             // If the overlay is enabled, we need to update the position if changed
             val position = IntSetting.PERFORMANCE_OVERLAY_POSITION.int
@@ -519,6 +545,10 @@ class EmulationFragment : Fragment(), SurfaceHolder.Callback, Choreographer.Fram
     override fun onDestroy() {
         EmulationLifecycleUtil.removeHook(onPause)
         EmulationLifecycleUtil.removeHook(onShutdown)
+        if (gameFd != null) {
+            ParcelFileDescriptor.adoptFd(gameFd!!).close()
+            gameFd = null
+        }
         super.onDestroy()
     }
 
@@ -845,7 +875,7 @@ class EmulationFragment : Fragment(), SurfaceHolder.Callback, Choreographer.Fram
         popupMenu.setOnMenuItemClickListener {
             when (it.itemId) {
                 R.id.menu_emulation_amiibo_load -> {
-                    emulationActivity.openFileLauncher.launch(false)
+                    emulationActivity.openAmiiboFileLauncher.launch(false)
                     true
                 }
 

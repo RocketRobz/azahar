@@ -6,6 +6,11 @@ add_executable(citra_meta
 
 set_target_properties(citra_meta PROPERTIES OUTPUT_NAME "azahar")
 
+if (BSD STREQUAL "NetBSD")
+    include(DisablePaxMprotect)
+    disable_pax_mprotect(citra_meta)
+endif()
+
 if (APPLE)
     set(DIST_DIR "../../dist/apple")
     set(APPLE_RESOURCES
@@ -43,11 +48,7 @@ if (APPLE)
     endif()
 endif()
 
-target_link_libraries(citra_meta PRIVATE fmt)
-
-if (ENABLE_SDL2_FRONTEND)
-    target_link_libraries(citra_meta PRIVATE citra_sdl)
-endif()
+target_link_libraries(citra_meta PRIVATE citra_common fmt)
 
 if (ENABLE_QT)
     target_link_libraries(citra_meta PRIVATE citra_qt)
@@ -63,6 +64,7 @@ if (ENABLE_QT AND UNIX AND NOT APPLE)
 endif()
 
 if (ENABLE_QT AND APPLE)
+    find_package(Qt6 REQUIRED COMPONENTS GuiPrivate)
     target_link_libraries(citra_meta PRIVATE Qt6::GuiPrivate)
 endif()
 
