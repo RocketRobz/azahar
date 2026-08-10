@@ -58,6 +58,9 @@ void PicaCore::InitializeRegs() {
     // Values initialized by GSP
     regs.internal.irq_autostop = 1;
     regs.internal.irq_mask = 0xFFFFFFF0;
+    // Older versions of libctru didn't initialize this, initialize it here to avoid endless black
+    // screen. Not needed on actual hardware due to previous software already having set it up
+    regs.internal.irq_compare = 0x12345678;
 
     auto& framebuffer_top = regs.framebuffer_config[0];
     auto& framebuffer_sub = regs.framebuffer_config[1];
@@ -584,6 +587,11 @@ void PicaCore::LoadVertices(bool is_indexed) {
     // Locate index buffer.
     const auto& index_info = pipeline.index_array;
     const u8* index_address_8 = memory.GetPhysicalPointer(base_address + index_info.offset);
+    if (index_address_8 == nullptr) {
+        // Mario & Luigi: Superstar Saga sets an invalid base address
+        // for the vertex attributes. Return early if that is the case.
+        return;
+    }
     const u16* index_address_16 = reinterpret_cast<const u16*>(index_address_8);
     const bool index_u16 = index_info.format != 0;
 

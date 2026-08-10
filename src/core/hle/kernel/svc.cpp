@@ -1701,7 +1701,7 @@ Result SVC::CreateMemoryBlock(Handle* out_handle, u32 addr, u32 size, u32 my_per
     std::shared_ptr<SharedMemory> shared_memory = nullptr;
 
     auto VerifyPermissions = [](MemoryPermission permission) {
-        // SharedMemory blocks can not be created with Execute permissions
+        // SharedMemory blocks can not be created with execute permissions
         switch (permission) {
         case MemoryPermission::None:
         case MemoryPermission::Read:
@@ -2191,7 +2191,11 @@ Result SVC::ControlProcess(Handle process_handle, u32 process_OP, u32 varg2, u32
                     kernel.GetCurrentThreadManager().GetCurrentThread()->thread_id) {
                     continue;
                 }
-                thread.get()->can_schedule = !varg2;
+                if (varg2) {
+                    thread->SetUnscheduleMode(Kernel::UnscheduleMode::SVC);
+                } else {
+                    thread->ClearUnscheduleMode(Kernel::UnscheduleMode::SVC);
+                }
             }
         }
         return ResultSuccess;
